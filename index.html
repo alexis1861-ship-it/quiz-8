@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Викторина «Путешествие по России»</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 20px;
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .cards {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 40px 30px;
+            width: 320px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+            color: white;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.2);
+        }
+        .card-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .card-desc {
+            font-size: 0.95rem;
+            opacity: 0.7;
+            line-height: 1.5;
+        }
+        .footer {
+            margin-top: 40px;
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+        @media (max-width: 600px) {
+            .logo { font-size: 1.8rem; }
+            .card { width: 100%; max-width: 320px; padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">🗺️ Путешествие по России</div>
+    <div class="subtitle">Интерактивная географияческая викторина</div>
+
+    <div class="cards">
+        <a href="host.html" class="card">
+            <div class="card-icon">🎤</div>
+            <div class="card-title">Я ведущий</div>
+            <div class="card-desc">Управляйте ходом викторины, следите за ответами участников и открывайте точки на карте</div>
+        </a>
+        <a href="player.html" class="card">
+            <div class="card-icon">🎮</div>
+            <div class="card-title">Я участник</div>
+            <div class="card-desc">Присоединяйтесь к игре по коду комнаты и отвечайте на вопросы в реальном времени</div>
+        </a>
+    </div>
+
+    <div class="footer">Сезон III: Путешествие по России</div>
+</body>
+</html>

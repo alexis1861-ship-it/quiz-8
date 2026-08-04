@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ведущий — Викторина по России</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#0a0e1a;color:#fff;overflow:hidden;height:100vh}
+.container{display:flex;height:100vh}
+.map-section{flex:1;position:relative;background:#0d1b2a;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.map-wrapper{position:relative;width:95%;max-width:1200px}
+.map-bg{width:100%;height:auto;display:block;border-radius:12px}
+.map-point{position:absolute;width:36px;height:36px;transform:translate(-50%,-50%);cursor:pointer;transition:all 0.3s ease;z-index:10}
+.map-point .number{width:36px;height:36px;background:rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;color:white;backdrop-filter:blur(4px)}
+.map-point.answered .number{display:none}
+.map-point .flag,.map-point .cross{display:none;width:40px;height:40px;position:absolute;top:-10px;left:50%;transform:translateX(-50%)}
+.map-point .flag img{width:100%;height:auto;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))}
+.map-point .cross{color:#ef4444;font-size:32px;font-weight:bold;text-shadow:0 2px 4px rgba(0,0,0,0.8);line-height:40px;text-align:center}
+.map-point.answered.correct .flag{display:block}
+.map-point.answered.wrong .cross{display:block}
+.map-point.current .number{border-color:#3b82f6;box-shadow:0 0 15px rgba(59,130,246,0.6);background:rgba(59,130,246,0.3);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.2)}}
+@keyframes dropIn{0%{transform:translate(-50%,-100px);opacity:0}100%{transform:translate(-50%,-50%);opacity:1}}
+.map-point.answered{animation:dropIn 0.5s ease}
+.panel-section{width:480px;background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);border-left:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;overflow-y:auto}
+.panel-header{padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);text-align:center}
+.panel-header h1{font-size:1.3rem;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.room-code{display:inline-block;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);padding:8px 20px;border-radius:8px;font-family:monospace;font-size:1.5rem;letter-spacing:4px;margin-top:8px}
+.panel-content{flex:1;padding:20px;overflow-y:auto}
+.setup-box{text-align:center;padding:40px 20px}
+.btn{background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;padding:14px 32px;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 15px rgba(59,130,246,0.3);margin:8px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,130,246,0.4)}
+.btn:active{transform:translateY(0)}
+.btn.secondary{background:rgba(255,255,255,0.1);box-shadow:none}
+.btn.secondary:hover{background:rgba(255,255,255,0.15)}
+.btn.success{background:linear-gradient(135deg,#10b981,#059669)}
+.btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important}
+.question-card{background:rgba(0,0,0,0.3);border:1px solid rgba(59,130,246,0.3);border-radius:16px;padding:20px;margin-bottom:20px}
+.question-image{width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.1)}
+.question-text{font-size:1rem;line-height:1.5;margin-bottom:16px;color:#e2e8f0}
+.options-list{display:flex;flex-direction:column;gap:8px}
+.option-item{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:12px 16px;border-radius:10px;display:flex;align-items:center;gap:12px;transition:all 0.2s}
+.option-item.correct{background:rgba(16,185,129,0.2);border-color:#10b981}
+.option-item.wrong{background:rgba(239,68,68,0.2);border-color:#ef4444}
+.option-letter{width:32px;height:32px;background:rgba(59,130,246,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.9rem;flex-shrink:0}
+.option-text{font-size:0.95rem}
+.option-votes{margin-left:auto;font-size:0.85rem;opacity:0.7;min-width:60px;text-align:right}
+.progress-bar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-bottom:20px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);transition:width 0.5s ease;border-radius:3px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.stat-box{background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;text-align:center}
+.stat-value{font-size:1.5rem;font-weight:bold;color:#60a5fa}
+.stat-label{font-size:0.8rem;opacity:0.6;margin-top:4px}
+.final-screen{text-align:center;padding:20px}
+.final-screen img{max-width:100%;border-radius:16px;margin-bottom:20px}
+.final-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.game-log{background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;max-height:150px;overflow-y:auto;font-size:0.85rem;margin-top:16px}
+.log-entry{padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);opacity:0.8}
+.vote-summary{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center}
+.vote-summary .winner{font-size:1.1rem;font-weight:bold;color:#e2e8f0;margin-bottom:4px}
+.vote-summary .verdict{font-size:1.2rem;font-weight:bold;margin-top:8px}
+.vote-summary .verdict.correct{color:#10b981}
+.vote-summary .verdict.wrong{color:#ef4444}
+@media(max-width:1024px){.container{flex-direction:column}.map-section{height:50vh;min-height:300px}.panel-section{width:100%;height:50vh;border-left:none;border-top:1px solid rgba(255,255,255,0.1)}}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="map-section">
+<div class="map-wrapper" id="mapWrapper">
+<img src="assets/map-empty.jpg" alt="Карта России" class="map-bg" id="mapBg">
+<div id="pointsContainer"></div>
+</div>
+</div>
+<div class="panel-section">
+<div class="panel-header">
+<h1>🎤 Панель ведущего</h1>
+<div id="roomDisplay" class="hidden">Код комнаты: <span class="room-code" id="roomCode">----</span></div>
+</div>
+<div class="panel-content" id="panelContent">
+<div id="setupScreen" class="setup-box">
+<div style="font-size:4rem;margin-bottom:20px">🎮</div>
+<h2 style="margin-bottom:12px">Создать новую игру</h2>
+<p style="opacity:0.7;margin-bottom:24px">Нажмите кнопку ниже, чтобы создать комнату и начать викторину</p>
+<button class="btn" onclick="createRoom()">Создать комнату</button>
+</div>
+<div id="gameScreen" class="hidden">
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+<div class="stats-grid">
+<div class="stat-box"><div class="stat-value" id="statQuestion">0/10</div><div class="stat-label">Вопрос</div></div>
+<div class="stat-box"><div class="stat-value" id="statPlayers">0</div><div class="stat-label">Игроков</div></div>
+</div>
+<div id="questionArea">
+<div class="question-card">
+<img id="qImage" src="" alt="Иллюстрация" class="question-image hidden">
+<div class="question-text" id="qText">Нажмите «Показать вопрос», чтобы начать</div>
+<div class="options-list" id="qOptions"></div>
+</div>
+</div>
+<div id="voteSummary" class="vote-summary hidden">
+<div class="winner" id="voteWinner"></div>
+<div class="verdict" id="voteVerdict"></div>
+</div>
+<div id="controlsArea" style="text-align:center">
+<button class="btn" id="btnShow" onclick="showQuestion()">Показать вопрос</button>
+<button class="btn secondary hidden" id="btnClose" onclick="closeVoting()">Завершить приём ответов</button>
+<button class="btn hidden" id="btnNext" onclick="nextQuestion()">Следующий вопрос →</button>
+</div>
+<div class="game-log" id="gameLog">
+<div style="font-weight:bold;margin-bottom:8px;color:#60a5fa">📋 Лог игры:</div>
+<div id="logContent"></div>
+</div>
+</div>
+<div id="finalScreen" class="final-screen hidden">
+<img src="assets/final-robot.png" alt="Поздравление" style="max-height:250px;object-fit:contain" onerror="this.style.display='none';document.getElementById('hostFinalFallback').style.display='block'">
+<div id="hostFinalFallback" style="display:none;font-size:5rem;text-align:center">🎉</div>
+<h2 style="margin:16px 0;font-size:1.5rem">Викторина завершена!</h2>
+<div class="final-stats">
+<div class="stat-box"><div class="stat-value" id="finalCorrect">0</div><div class="stat-label">Правильных</div></div>
+<div class="stat-box"><div class="stat-value" id="finalWrong">0</div><div class="stat-label">Неправильных</div></div>
+</div>
+<button class="btn" onclick="location.reload()">Новая игра</button>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://utqxlzzyeovbdldkrzgf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ncPe5DKiQtrIbD--uKF3nA_K2dtuduQ';
+
+const QUIZ_DATA = [
+  {"id":1,"question":"Как вы думаете, где находится самый высокий водопад на территории России?","options":["Восточный Саян","Плато Путорана","Кавказ","Сихотэ-Алинь"],"correct":1,"image":"1.jpg","mapX":50,"mapY":40},
+  {"id":2,"question":"Возможно вы не знали, но город Звенигород Московской области имеет ещё дореволюционное прозвище— «Подмосковная Швейцария» / «Русская Швейцария». Это звучит удивительно, но мы это можем увидеть ещё на дореволюционных открытках, а называли Звенигород так за холмистый ландшафт, сосновые леса и заливные луга этих мест. Но, кажется, мы все слышали такую метафору не раз и для других регионов. Как вы думаете, сколько мест в России, которые называют \"...Швейцарией\", нам удалось насчитать?","options":["до 5","6-10","11-15","больше 16"],"correct":3,"image":"2.jpg","mapX":14,"mapY":31},
+  {"id":3,"question":"Какая природная достопримечательности Камчатки чуть не исчезла в 1970-х годах?","options":["Халактырский пляж","Долина Гейзеров","Авачинская Бухта","Ключевская Сопка"],"correct":1,"image":"3.jpg","mapX":90,"mapY":46},
+  {"id":4,"question":"Название какого города не тюркского происхождения?","options":["Тюмень","Тамбов","Самара","Пенза"],"correct":3,"image":"4.jpg","mapX":28,"mapY":48},
+  {"id":5,"question":"Сухое озеро в Большом Голоустном — это редкое озеро-призрак на берегу Байкала, в чем его особенность?","options":["озеро высохло за рекордно короткие сроки, буквально на глазах у жителей","озеро наполняется водой примерно раз в 4 года, превращаясь из зеленой поляны в водоем","озеро настолько мелкое, что его можно перейти вброд даже в самом широком месте","вода этого озера настолько солёная, что в ней не выживает ни один живой организм"],"correct":1,"image":"5.jpg","mapX":55,"mapY":83},
+  {"id":6,"question":"Единственный внутренний анклав в России:","options":["Адыгея","ЯНАО","Тыва","Ингушетия"],"correct":0,"image":"6.png","mapX":6,"mapY":48},
+  {"id":7,"question":"Верите ли вы, что название рек Енисей, Лена, Кама и Ишим переводятся как \"...Река\"?","options":["Верю","Не верю"],"correct":1,"image":"7.jpg","mapX":36,"mapY":60},
+  {"id":8,"question":"Какое озеро действительно существует на Камчатке?","options":["Медведь лег","Медведь сел","Медведь упал","Медведь отжался"],"correct":2,"image":"8.jpg","mapX":90,"mapY":31},
+  {"id":9,"question":"Сарезская белозубка — новый для России вид млекопитающего, найденный на территории нашей страны в 2024 году. За всю историю изучения поймано не более 30 таких зверьков. А где её обнаружили?","options":["Дагестан","Якутия","Чувашия","Астраханская область"],"correct":0,"image":"9.jpg","mapX":9,"mapY":68},
+  {"id":10,"question":"Перед вами Волга, великая русская река, одна из знаменитейших и крупнейших в мире. Но не обманываем ли мы вас? Как вы думаете, это настоящее фото или сгенерированное ИИ?","options":["ИИ сгенерировано с нуля","настоящее","ИИ, но на базе настоящего","сдаюсь"],"correct":0,"image":"10.png","mapX":17,"mapY":54}
+];
+
+let sbClient = null;
+let roomCode = null;
+let currentQ = 0;
+let gameState = 'waiting';
+let votes = {};
+let subscription = null;
+let playersCount = 0;
+let results = { correct: 0, wrong: 0 };
+
+async function init() {
+    try {
+        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        log('Подключение к Supabase установлено');
+    } catch(e) {
+        log('Ошибка подключения: ' + e.message);
+        alert('Ошибка подключения к Supabase. Проверьте настройки в коде.');
+    }
+}
+
+function log(msg) {
+    const el = document.getElementById('logContent');
+    if (!el) return;
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    el.prepend(entry);
+}
+
+async function loadPlayersCount() {
+    if (!sbClient || !roomCode) return;
+    const { count, error } = await sbClient.from('players').select('*', { count: 'exact', head: true }).eq('game_code', roomCode);
+    if (!error) {
+        playersCount = count || 0;
+        document.getElementById('statPlayers').textContent = playersCount;
+        log('Загружено игроков: ' + playersCount);
+    } else {
+        log('Ошибка загрузки игроков: ' + error.message);
+    }
+}
+
+async function createRoom() {
+    if (!sbClient) { alert('Supabase не настроен'); return; }
+    roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const { error } = await sbClient.from('game_sessions').insert([{ code: roomCode, status: 'waiting', current_question: 0, total_questions: QUIZ_DATA.length }]);
+    if (error) { log('Ошибка создания: ' + error.message); return; }
+    document.getElementById('roomCode').textContent = roomCode;
+    document.getElementById('roomDisplay').classList.remove('hidden');
+    document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    log('Комната ' + roomCode + ' создана');
+    subscribeToGame();
+    renderMapPoints();
+    updateStats();
+    await loadPlayersCount();
+}
+
+function subscribeToGame() {
+    subscription = sbClient.channel('game:' + roomCode)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'game_sessions', filter: 'code=eq.' + roomCode }, handleGameChange)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votes', filter: 'game_code=eq.' + roomCode }, handleVote)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'players', filter: 'game_code=eq.' + roomCode }, handlePlayerJoin)
+        .subscribe();
+}
+
+function handleGameChange(payload) {
+    const data = payload.new;
+    if (!data) return;
+    log('Состояние игры обновлено: ' + data.status);
+}
+
+function handleVote(payload) {
+    const v = payload.new;
+    if (!votes[v.question_id]) votes[v.question_id] = {};
+    if (!votes[v.question_id][v.option_index]) votes[v.question_id][v.option_index] = 0;
+    votes[v.question_id][v.option_index]++;
+    if (gameState === 'voting' && v.question_id === currentQ) updateVoteDisplay();
+    log('Голос: вопрос ' + v.question_id + ', вариант ' + v.option_index);
+}
+
+function handlePlayerJoin() {
+    playersCount++;
+    document.getElementById('statPlayers').textContent = playersCount;
+    log('Новый игрок присоединился. Всего: ' + playersCount);
+}
+
+function renderMapPoints() {
+    const container = document.getElementById('pointsContainer');
+    container.innerHTML = '';
+    QUIZ_DATA.forEach((q, idx) => {
+        const point = document.createElement('div');
+        point.className = 'map-point';
+        point.id = 'point-' + idx;
+        point.style.left = q.mapX + '%';
+        point.style.top = q.mapY + '%';
+        point.innerHTML = '<div class="number">' + (idx + 1) + '</div><div class="flag"><img src="assets/flag.png" alt="Флаг"></div><div class="cross">✗</div>';
+        container.appendChild(point);
+    });
+}
+
+async function showQuestion() {
+    if (currentQ >= QUIZ_DATA.length) { endGame(); return; }
+    gameState = 'showing';
+    const q = QUIZ_DATA[currentQ];
+    await sbClient.from('game_sessions').update({ status: 'showing', current_question: currentQ }).eq('code', roomCode);
+    document.getElementById('qText').textContent = q.question;
+    const img = document.getElementById('qImage');
+    img.src = 'assets/' + q.image;
+    img.classList.remove('hidden');
+    const optsContainer = document.getElementById('qOptions');
+    optsContainer.innerHTML = '';
+    const letters = ['А','Б','В','Г'];
+    q.options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'option-item';
+        div.id = 'opt-' + i;
+        div.innerHTML = '<div class="option-letter">' + (letters[i] || (i+1)) + '</div><div class="option-text">' + opt + '</div><div class="option-votes" id="votes-' + i + '">0 голосов</div>';
+        optsContainer.appendChild(div);
+    });
+    document.querySelectorAll('.map-point').forEach((p, i) => { p.classList.toggle('current', i === currentQ); });
+    document.getElementById('btnShow').classList.add('hidden');
+    document.getElementById('btnClose').classList.remove('hidden');
+    document.getElementById('btnNext').classList.add('hidden');
+    document.getElementById('voteSummary').classList.add('hidden');
+    gameState = 'voting';
+    await sbClient.from('game_sessions').update({ status: 'voting' }).eq('code', roomCode);
+    log('Вопрос ' + (currentQ + 1) + ' показан');
+    updateStats();
+}
+
+function updateVoteDisplay() {
+    const qVotes = votes[currentQ] || {};
+    let total = 0;
+    Object.values(qVotes).forEach(v => total += v);
+    QUIZ_DATA[currentQ].options.forEach((_, i) => {
+        const count = qVotes[i] || 0;
+        const el = document.getElementById('votes-' + i);
+        if (el) el.textContent = count + ' голос' + getEnding(count);
+    });
+}
+
+function getEnding(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return '';
+    if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'а';
+    return 'ов';
+}
+
+async function closeVoting() {
+    gameState = 'revealed';
+    document.getElementById('btnClose').classList.add('hidden');
+    updateVoteDisplay();
+    const q = QUIZ_DATA[currentQ];
+    const qVotes = votes[currentQ] || {};
+    let maxVotes = -1;
+    let winnerIndices = [];
+    let totalVotes = 0;
+    Object.entries(qVotes).forEach(([idx, count]) => {
+        totalVotes += count;
+        const i = parseInt(idx);
+        if (count > maxVotes) {
+            maxVotes = count;
+            winnerIndices = [i];
+        } else if (count === maxVotes) {
+            winnerIndices.push(i);
+        }
+    });
+    const winnerText = winnerIndices.length > 0 ? winnerIndices.map(i => q.options[i]).join(', ') : 'Нет голосов';
+    const isCorrect = winnerIndices.includes(q.correct);
+    const summaryEl = document.getElementById('voteSummary');
+    const winnerEl = document.getElementById('voteWinner');
+    const verdictEl = document.getElementById('voteVerdict');
+    winnerEl.textContent = 'Большинство выбрало: ' + winnerText + ' (' + maxVotes + ' из ' + totalVotes + ')';
+    verdictEl.textContent = isCorrect ? '✅ Это ПРАВИЛЬНЫЙ ответ!' : '❌ Это НЕПРАВИЛЬНЫЙ ответ...';
+    verdictEl.className = 'verdict ' + (isCorrect ? 'correct' : 'wrong');
+    summaryEl.classList.remove('hidden');
+    await sbClient.from('game_sessions').update({ status: 'revealed' }).eq('code', roomCode);
+    log('Приём ответов завершён. Победители: ' + winnerText + ' → ' + (isCorrect ? 'ФЛАГ' : 'КРЕСТ'));
+    setTimeout(() => {
+        markResult(isCorrect);
+    }, 2000);
+}
+
+async function markResult(isCorrect) {
+    const point = document.getElementById('point-' + currentQ);
+    point.classList.remove('current');
+    point.classList.add('answered');
+    point.classList.add(isCorrect ? 'correct' : 'wrong');
+    const q = QUIZ_DATA[currentQ];
+    document.querySelectorAll('.option-item').forEach((el, i) => {
+        el.classList.remove('correct', 'wrong');
+        if (i === q.correct) el.classList.add('correct');
+    });
+    if (isCorrect) results.correct++; else results.wrong++;
+    document.getElementById('voteSummary').classList.add('hidden');
+    document.getElementById('btnNext').classList.remove('hidden');
+    await sbClient.from('game_sessions').update({ status: 'revealed', revealed_correct: isCorrect }).eq('code', roomCode);
+    log('Результат: ' + (isCorrect ? 'Правильно (флаг)' : 'Неправильно (крест)'));
+}
+
+async function nextQuestion() {
+    currentQ++;
+    if (currentQ >= QUIZ_DATA.length) { endGame(); return; }
+    gameState = 'waiting';
+    votes = {};
+    document.getElementById('qText').textContent = 'Нажмите «Показать вопрос», чтобы продолжить';
+    document.getElementById('qImage').classList.add('hidden');
+    document.getElementById('qOptions').innerHTML = '';
+    document.getElementById('btnShow').classList.remove('hidden');
+    document.getElementById('btnNext').classList.add('hidden');
+    document.getElementById('voteSummary').classList.add('hidden');
+    await sbClient.from('game_sessions').update({ status: 'waiting', current_question: currentQ, revealed_correct: null }).eq('code', roomCode);
+    updateStats();
+}
+
+async function endGame() {
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('finalScreen').classList.remove('hidden');
+    document.getElementById('finalCorrect').textContent = results.correct;
+    document.getElementById('finalWrong').textContent = results.wrong;
+    await sbClient.from('game_sessions').update({ status: 'finished' }).eq('code', roomCode);
+    log('Игра завершена');
+}
+
+function updateStats() {
+    document.getElementById('statQuestion').textContent = (currentQ + 1) + '/' + QUIZ_DATA.length;
+    document.getElementById('progressFill').style.width = ((currentQ / QUIZ_DATA.length) * 100) + '%';
+}
+
+init();
+</script>
+</body>
+</html>
