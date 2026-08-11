@@ -2,229 +2,400 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Викторина — Игрок</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Участник — Викторина по России</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .card { background: #fff; border-radius: 16px; padding: 30px; width: 100%; max-width: 480px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-  h1 { text-align: center; margin-bottom: 20px; color: #1a237e; font-size: 24px; }
-  .input-group { margin-bottom: 15px; }
-  .input-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #444; }
-  .input-group input { width: 100%; padding: 12px 14px; border: 2px solid #ddd; border-radius: 10px; font-size: 18px; text-align: center; letter-spacing: 4px; }
-  .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 17px; cursor: pointer; transition: all 0.2s; font-weight: 600; margin-top: 10px; }
-  .btn-primary { background: #1a237e; color: #fff; }
-  .btn-primary:hover { background: #283593; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .status { text-align: center; margin-top: 20px; padding: 15px; border-radius: 10px; font-size: 16px; }
-  .status.waiting { background: #e8eaf6; color: #1a237e; }
-  .status.success { background: #e8f5e9; color: #2e7d32; }
-  .status.error { background: #ffebee; color: #c62828; }
-  .question-text { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #333; line-height: 1.4; }
-  .options { display: flex; flex-direction: column; gap: 10px; }
-  .option-btn { padding: 14px; border: 2px solid #ddd; border-radius: 10px; background: #fafafa; font-size: 16px; cursor: pointer; transition: all 0.2s; text-align: left; }
-  .option-btn:hover { border-color: #1a237e; background: #e8eaf6; }
-  .option-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .option-btn.selected { border-color: #1a237e; background: #c5cae9; }
-  .result-icon { font-size: 64px; text-align: center; margin: 20px 0; }
-  .result-text { text-align: center; font-size: 20px; font-weight: 600; margin-bottom: 10px; }
-  .result-sub { text-align: center; color: #666; font-size: 15px; }
-  .hidden { display: none !important; }
-  .player-name { text-align: center; color: #666; margin-bottom: 15px; font-size: 14px; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(180deg,#020617 0%,#0f172a 50%,#1e293b 100%);color:#fff;min-height:100vh;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0}
+.container{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:20px;min-height:100vh;display:flex;flex-direction:column}
+.header{text-align:center;padding:20px 0}
+.header h1{font-size:1.4rem;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{opacity:0.6;font-size:0.9rem;margin-top:4px}
+.login-box{background:rgba(15,23,42,0.8);border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:32px 24px;margin-top:20px;backdrop-filter:blur(10px)}
+.input-group{margin-bottom:20px}
+.input-group label{display:block;margin-bottom:8px;font-size:0.9rem;opacity:0.8}
+.input-group input{width:100%;padding:14px 16px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:white;font-size:1.2rem;outline:none;transition:all 0.2s;text-align:center;letter-spacing:4px;font-family:monospace}
+.input-group input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.2)}
+.btn{width:100%;padding:16px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:14px;font-size:1.05rem;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 15px rgba(59,130,246,0.3);margin-top:8px}
+.btn:active{transform:scale(0.98)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important}
+.waiting-box{text-align:center;padding:60px 20px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.spinner{width:60px;height:60px;border:3px solid rgba(59,130,246,0.2);border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.question-wrapper{flex:1;display:flex;flex-direction:column;gap:16px;padding-top:10px}
+.question-header{display:flex;align-items:center;justify-content:space-between;background:rgba(15,23,42,0.6);border:1px solid rgba(59,130,246,0.2);border-radius:16px;padding:16px 20px}
+.q-number{font-size:0.85rem;opacity:0.7}
+.q-timer{font-family:monospace;font-size:1.2rem;color:#60a5fa}
+.media-block{position:relative;background:rgba(0,0,0,0.2);border:1px solid rgba(59,130,246,0.2);border-radius:20px;overflow:hidden}
+.media-block img{width:100%;height:200px;object-fit:cover;display:block}
+.question-text{background:rgba(15,23,42,0.6);border:1px solid rgba(59,130,246,0.2);border-radius:16px;padding:20px;font-size:1rem;line-height:1.5;color:#e2e8f0}
+.options{display:flex;flex-direction:column;gap:10px}
+.option-btn{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px;color:white;font-size:1rem;text-align:left;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
+.option-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent;transition:all 0.2s}
+.option-btn:active{transform:scale(0.98)}
+.option-btn:hover{background:rgba(255,255,255,0.08)}
+.option-btn.selected{background:rgba(59,130,246,0.15);border-color:#3b82f6}
+.option-btn.selected::before{background:#3b82f6}
+.option-btn.correct{background:rgba(16,185,129,0.2);border-color:#10b981}
+.option-btn.correct::before{background:#10b981}
+.option-btn.wrong{background:rgba(239,68,68,0.2);border-color:#ef4444}
+.option-btn.wrong::before{background:#ef4444}
+.option-letter{width:36px;height:36px;background:rgba(59,130,246,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1rem;flex-shrink:0}
+.option-btn.correct .option-letter{background:rgba(16,185,129,0.3)}
+.option-btn.wrong .option-letter{background:rgba(239,68,68,0.3)}
+.answer-status{text-align:center;padding:20px;background:rgba(15,23,42,0.6);border-radius:16px;border:1px solid rgba(255,255,255,0.1)}
+.answer-status .icon{font-size:3rem;margin-bottom:12px}
+.answer-status h3{margin-bottom:8px}
+.answer-status p{opacity:0.7;font-size:0.9rem}
+.final-box{text-align:center;padding:40px 20px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.final-box img{max-width:100%;border-radius:20px;max-height:280px;object-fit:contain}
+.hidden{display:none!important}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.4s ease}
 </style>
 </head>
 <body>
-<div class="card" id="app">
-  <h1>🗺️ Викторина</h1>
-
-  <div id="joinScreen">
-    <div class="input-group">
-      <label>Код комнаты (4 цифры)</label>
-      <input type="text" id="roomCode" maxlength="4" inputmode="numeric" pattern="\d{4}" placeholder="0000">
-    </div>
-    <button class="btn btn-primary" id="joinBtn" onclick="joinRoom()">Войти в комнату</button>
-    <div class="status waiting hidden" id="joinStatus"></div>
-  </div>
-
-  <div id="waitScreen" class="hidden">
-    <div class="player-name" id="playerNameDisplay"></div>
-    <div class="status waiting">⏳ Ожидаем начала вопроса...</div>
-  </div>
-
-  <div id="questionScreen" class="hidden">
-    <div class="player-name" id="playerNameQ"></div>
-    <div class="question-text" id="qText"></div>
-    <div class="options" id="qOptions"></div>
-  </div>
-
-  <div id="resultScreen" class="hidden">
-    <div class="player-name" id="playerNameR"></div>
-    <div class="result-icon" id="resultIcon"></div>
-    <div class="result-text" id="resultText"></div>
-    <div class="result-sub" id="resultSub"></div>
-  </div>
-
-  <div id="finalScreen" class="hidden">
-    <div style="text-align:center; padding:20px;">
-      <h2 style="margin-bottom:15px;">Викторина завершена!</h2>
-      <img src="assets/final-robot.png" alt="Робот" style="max-width:250px; border-radius:12px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <div style="display:none; font-size:80px;">🎉</div>
-      <p style="margin-top:15px; color:#555;">Спасибо за игру!</p>
-    </div>
-  </div>
+<div class="bg-grid"></div>
+<div class="container">
+<div class="header">
+<h1>🗺️ Путешествие по России</h1>
+<p>Сезон III: Географическая викторина</p>
+</div>
+<div id="loginScreen">
+<div class="login-box">
+<div style="text-align:center;margin-bottom:24px">
+<div style="font-size:3rem;margin-bottom:12px">🎮</div>
+<h2 style="font-size:1.2rem;margin-bottom:4px">Присоединиться к игре</h2>
+<p style="opacity:0.6;font-size:0.9rem">Введите 4-значный код от ведущего</p>
+</div>
+<div class="input-group">
+<label>Код комнаты</label>
+<input type="text" id="roomCodeInput" placeholder="0000" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+</div>
+<button class="btn" onclick="joinGame()">Войти в игру</button>
+<div id="loginError" style="color:#ef4444;text-align:center;margin-top:12px;font-size:0.9rem;display:none"></div>
+</div>
+</div>
+<div id="waitingScreen" class="hidden">
+<div class="waiting-box">
+<div class="spinner"></div>
+<h2 style="margin-bottom:12px">Ожидаем ведущего...</h2>
+<p style="opacity:0.6">Вы в комнате <strong id="waitingCode" style="color:#60a5fa"></strong></p>
+<p style="opacity:0.5;margin-top:8px;font-size:0.85rem">Не закрывайте эту страницу</p>
+</div>
+</div>
+<div id="questionScreen" class="hidden question-wrapper">
+<div class="question-header">
+<span class="q-number">Вопрос <span id="qNum">1</span>/10</span>
+<span class="q-timer" id="timer">--</span>
+</div>
+<div class="media-block">
+<img id="qImage" src="" alt="Иллюстрация">
+</div>
+<div class="question-text" id="qText"></div>
+<div class="options" id="qOptions"></div>
+</div>
+<div id="answeredScreen" class="hidden">
+<div class="answer-status fade-in">
+<div class="icon" id="answerIcon">⏳</div>
+<h3 id="answerTitle">Ответ принят!</h3>
+<p id="answerText">Ожидаем результатов от ведущего...</p>
+</div>
+</div>
+<div id="finalScreen" class="hidden final-box">
+<img src="assets/final-robot.png" alt="Поздравление" onerror="this.style.display='none';document.getElementById('playerFinalFallback').style.display='block'">
+<div id="playerFinalFallback" style="display:none;font-size:5rem;text-align:center">🎉</div>
+<h2>Викторина завершена!</h2>
+<p style="opacity:0.7">Спасибо за участие в «Путешествии по России»</p>
+<button class="btn" onclick="location.reload()" style="margin-top:20px">Играть снова</button>
+</div>
 </div>
 
 <script>
-// ==================== CONFIG ====================
 const SUPABASE_URL = 'https://utqxlzzyeovbdldkrzgf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ncPe5DKiQtrIbD--uKF3nA_K2dtuduQ';
-// =================================================
 
-const questions = [
-  { text: "Где находится плато Путорана?", options: ["На Урале", "В Сибири", "На Дальнем Востоке", "На Кавказе"], correct: 1 },
-  { text: "Где находится город Звенигород?", options: ["В Подмосковье", "В Сибири", "На Урале", "В Поволжье"], correct: 0 },
-  { text: "Где находится полуостров Камчатка?", options: ["В Сибири", "На Дальнем Востоке", "На Урале", "На Севере"], correct: 1 },
-  { text: "Верите ли вы, что названия городов Тюмень, Самара, Тамбов и Пенза имеют тюркское происхождение?", options: ["Верю", "Не верю"], correct: 1 },
-  { text: "Где находится озеро Байкал?", options: ["На юге Сибири", "На Дальнем Востоке", "На Урале", "На Севере"], correct: 0 },
-  { text: "Где находится республика Адыгея?", options: ["На Кавказе", "На Урале", "В Поволжье", "В Сибири"], correct: 0 },
-  { text: "Название какой из этих рек переводится не как «...Река»?", options: ["Енисей", "Кама", "Лена", "Ишим"], correct: 3 },
-  { text: "Где на карте находится озеро на полуострове Камчатка?", options: ["На Чукотке", "На северо-востоке", "В Сибири", "На Урале"], correct: 1 },
-  { text: "Где находится республика Дагестан?", options: ["На Кавказе", "На Урале", "В Поволжье", "В Сибири"], correct: 0 },
-  { text: "Где протекает река Волга?", options: ["В Поволжье", "В Сибири", "На Урале", "На Севере"], correct: 0 }
+const QUIZ_DATA = [
+  {
+    "id": 1,
+    "question": "Как вы думаете, где находится самый высокий водопад на территории России?",
+    "options": [
+      "Восточный Саян",
+      "Плато Путорана",
+      "Кавказ",
+      "Сихотэ-Алинь"
+    ],
+    "correct": 1,
+    "image": "1.jpg",
+    "mapX": 50,
+    "mapY": 40
+  },
+  {
+    "id": 2,
+    "question": "Возможно вы не знали, но город Звенигород Московской области имеет ещё дореволюционное прозвище— «Подмосковная Швейцария» / «Русская Швейцария». Это звучит удивительно, но мы это можем увидеть ещё на дореволюционных открытках, а называли Звенигород так за холмистый ландшафт, сосновые леса и заливные луга этих мест. Но, кажется, мы все слышали такую метафору не раз и для других регионов. Как вы думаете, сколько мест в России, которые называют \"...Швейцарией\", нам удалось насчитать?",
+    "options": [
+      "до 5",
+      "6-10",
+      "11-15",
+      "больше 16"
+    ],
+    "correct": 3,
+    "image": "2.jpg",
+    "mapX": 14,
+    "mapY": 31
+  },
+  {
+    "id": 3,
+    "question": "Какая природная достопримечательности Камчатки чуть не исчезла в 1970-х годах?",
+    "options": [
+      "Халактырский пляж",
+      "Долина Гейзеров",
+      "Авачинская Бухта",
+      "Ключевская Сопка"
+    ],
+    "correct": 1,
+    "image": "3.jpg",
+    "mapX": 90,
+    "mapY": 46
+  },
+  {
+    "id": 4,
+    "question": "Верите ли вы, что названия городов Тюмень, Самара, Тамбов и Пенза имеют тюркское происхождение?",
+    "options": [
+      "Верю",
+      "Не верю"
+    ],
+    "correct": 1,
+    "image": "4.jpg",
+    "mapX": 28,
+    "mapY": 48
+  },
+  {
+    "id": 5,
+    "question": "Сухое озеро в Большом Голоустном — это редкое озеро-призрак на берегу Байкала, в чем его особенность?",
+    "options": [
+      "озеро высохло за рекордно короткие сроки, буквально на глазах у жителей",
+      "озеро наполняется водой примерно раз в 4 года, превращаясь из зеленой поляны в водоем",
+      "озеро настолько мелкое, что его можно перейти вброд даже в самом широком месте",
+      "вода этого озера настолько солёная, что в ней не выживает ни один живой организм"
+    ],
+    "correct": 1,
+    "image": "5.jpg",
+    "mapX": 55,
+    "mapY": 83
+  },
+  {
+    "id": 6,
+    "question": "Единственный внутренний анклав в России:",
+    "options": [
+      "Адыгея",
+      "ЯНАО",
+      "Тыва",
+      "Ингушетия"
+    ],
+    "correct": 0,
+    "image": "6.png",
+    "mapX": 6,
+    "mapY": 48
+  },
+    {
+    "id": 7,
+    "question": "Название какой из этих рек переводится не как «...Река»?",
+    "options": [
+      "Енисей",
+      "Кама",
+      "Лена",
+      "Ишим"
+    ],
+    "correct": 3,
+    "image": "7.jpg",
+    "mapX": 36,
+    "mapY": 60
+  },
+  {
+    "id": 8,
+    "question": "Какое озеро действительно существует на Камчатке?",
+    "options": [
+      "Медведь лег",
+      "Медведь сел",
+      "Медведь упал",
+      "Медведь отжался"
+    ],
+    "correct": 2,
+    "image": "8.jpg",
+    "mapX": 90,
+    "mapY": 31
+  },
+  {
+    "id": 9,
+    "question": "Сарезская белозубка — новый для России вид млекопитающего, найденный на территории нашей страны в 2024 году. За всю историю изучения поймано не более 30 таких зверьков. А где её обнаружили?",
+    "options": [
+      "Дагестан",
+      "Якутия",
+      "Чувашия",
+      "Астраханская область"
+    ],
+    "correct": 0,
+    "image": "9.jpg",
+    "mapX": 9,
+    "mapY": 68
+  },
+  {
+    "id": 10,
+    "question": "Перед вами Волга, великая русская река, одна из знаменитейших и крупнейших в мире. Но не обманываем ли мы вас? Как вы думаете, это настоящее фото или сгенерированное ИИ?",
+    "options": [
+      "ИИ сгенерировано с нуля",
+      "настоящее",
+      "ИИ, но на базе настоящего",
+      "сдаюсь"
+    ],
+    "correct": 0,
+    "image": "10.png",
+    "mapX": 17,
+    "mapY": 54
+  }
 ];
 
-let supabase, playerName = '', roomCode = '', myVote = null, currentQ = -1;
+let sbClient = null;
+let roomCode = null;
+let playerName = null;
+let currentQ = -1;
+let hasVoted = false;
+let myVote = null;
+let subscription = null;
 
-function getOrCreateName() {
-  let name = localStorage.getItem('quiz_player_name');
-  if (!name) {
-    name = 'Игрок-' + Math.floor(1000 + Math.random() * 9000);
-    localStorage.setItem('quiz_player_name', name);
-  }
-  return name;
-}
-
-try {
-  supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (e) {
-  alert('Ошибка подключения к Supabase');
-}
-
-async function joinRoom() {
-  const code = document.getElementById('roomCode').value.trim();
-  const status = document.getElementById('joinStatus');
-  if (!/^\d{4}$/.test(code)) {
-    status.textContent = 'Введите 4 цифры';
-    status.className = 'status error';
-    status.classList.remove('hidden');
-    return;
-  }
-  playerName = getOrCreateName();
-  roomCode = code;
-  document.getElementById('joinBtn').disabled = true;
-  try {
-    const { data: session, error: se } = await supabase.from('game_sessions').select('*').eq('code', code).single();
-    if (se || !session) {
-      status.textContent = 'Комната не найдена';
-      status.className = 'status error';
-      status.classList.remove('hidden');
-      document.getElementById('joinBtn').disabled = false;
-      return;
+function getPlayerName() {
+    let name = localStorage.getItem('quiz_player_name');
+    if (!name) {
+        name = 'Игрок-' + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem('quiz_player_name', name);
     }
-    const { error: pe } = await supabase.from('players').insert({ session_code: code, name: playerName, joined_at: new Date().toISOString() });
-    if (pe) throw pe;
-    document.getElementById('joinScreen').classList.add('hidden');
-    document.getElementById('waitScreen').classList.remove('hidden');
-    document.getElementById('playerNameDisplay').textContent = 'Вы: ' + playerName;
-    subscribeGame(session.id);
-  } catch (e) {
-    status.textContent = 'Ошибка: ' + e.message;
-    status.className = 'status error';
-    status.classList.remove('hidden');
-    document.getElementById('joinBtn').disabled = false;
-  }
+    return name;
 }
 
-function subscribeGame(sessionId) {
-  supabase.channel('game-' + sessionId)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: 'id=eq.' + sessionId }, payload => {
-      const s = payload.new;
-      if (s.status === 'voting' && s.current_question !== currentQ) {
-        currentQ = s.current_question;
+async function init() {
+    playerName = getPlayerName();
+    try { sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+    catch(e) { showError('Ошибка подключения к серверу'); }
+}
+
+function showError(msg) {
+    const el = document.getElementById('loginError');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+async function joinGame() {
+    roomCode = document.getElementById('roomCodeInput').value.trim();
+    if (!roomCode) { showError('Введите код комнаты'); return; }
+    if (!/^\d{4}$/.test(roomCode)) { showError('Код должен состоять из 4 цифр'); return; }
+    const { data, error } = await sbClient.from('game_sessions').select('*').eq('code', roomCode).single();
+    if (error || !data) { showError('Комната не найдена'); return; }
+    if (data.status === 'finished') { showError('Игра уже завершена'); return; }
+    await sbClient.from('players').insert([{ game_code: roomCode, name: playerName }]);
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('waitingScreen').classList.remove('hidden');
+    document.getElementById('waitingCode').textContent = roomCode;
+    subscribe();
+    if (data.status === 'showing' || data.status === 'voting') {
+        currentQ = data.current_question;
+        hasVoted = false;
         myVote = null;
         showQuestion(currentQ);
-      } else if (s.status === 'correct' || s.status === 'wrong') {
-        showPersonalResult(s.status === 'correct');
-      } else if (s.status === 'finished') {
+    } else if (data.status === 'revealed') {
+        currentQ = data.current_question;
+        showRevealed(data.revealed_correct);
+    } else if (data.status === 'finished') {
         showFinal();
-      }
-    })
-    .subscribe();
+    }
 }
 
-function showQuestion(idx) {
-  if (idx < 0 || idx >= questions.length) return;
-  const q = questions[idx];
-  document.getElementById('waitScreen').classList.add('hidden');
-  document.getElementById('resultScreen').classList.add('hidden');
-  document.getElementById('questionScreen').classList.remove('hidden');
-  document.getElementById('playerNameQ').textContent = 'Вы: ' + playerName;
-  document.getElementById('qText').textContent = (idx + 1) + '. ' + q.text;
-  const optsDiv = document.getElementById('qOptions');
-  optsDiv.innerHTML = '';
-  q.options.forEach((opt, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'option-btn';
-    btn.textContent = opt;
-    btn.onclick = () => sendVote(i, btn);
-    optsDiv.appendChild(btn);
-  });
+function subscribe() {
+    subscription = sbClient.channel('player:' + roomCode)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: 'code=eq.' + roomCode }, handleStateChange)
+        .subscribe();
 }
 
-async function sendVote(optionIndex, btnElement) {
-  if (myVote !== null) return;
-  myVote = optionIndex;
-  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
-  btnElement.classList.add('selected');
-  try {
-    await supabase.from('votes').insert({
-      session_code: roomCode,
-      question_index: currentQ,
-      player_name: playerName,
-      vote: optionIndex,
-      created_at: new Date().toISOString()
+function handleStateChange(payload) {
+    const state = payload.new;
+    if (!state) return;
+    if (state.status === 'finished') { showFinal(); return; }
+    if (state.status === 'showing' || state.status === 'voting') {
+        if (state.current_question !== currentQ) {
+            currentQ = state.current_question;
+            hasVoted = false;
+            myVote = null;
+            showQuestion(currentQ);
+        }
+    }
+    if (state.status === 'revealed') { showRevealed(state.revealed_correct); }
+}
+
+function showQuestion(qIdx) {
+    if (qIdx >= QUIZ_DATA.length) return;
+    document.getElementById('waitingScreen').classList.add('hidden');
+    document.getElementById('answeredScreen').classList.add('hidden');
+    document.getElementById('finalScreen').classList.add('hidden');
+    document.getElementById('questionScreen').classList.remove('hidden');
+    const q = QUIZ_DATA[qIdx];
+    document.getElementById('qNum').textContent = qIdx + 1;
+    document.getElementById('qText').textContent = q.question;
+    document.getElementById('qImage').src = 'assets/' + q.image;
+    const optsContainer = document.getElementById('qOptions');
+    optsContainer.innerHTML = '';
+    const letters = ['А','Б','В','Г'];
+    q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = '<div class="option-letter">' + (letters[i] || (i+1)) + '</div><div style="flex:1">' + opt + '</div>';
+        btn.onclick = () => submitVote(i, btn);
+        optsContainer.appendChild(btn);
     });
-  } catch (e) { /* ignore */ }
 }
 
-function showPersonalResult(isMajorityCorrect) {
-  const q = questions[currentQ];
-  const myCorrect = (myVote === q.correct);
-  document.getElementById('questionScreen').classList.add('hidden');
-  document.getElementById('resultScreen').classList.remove('hidden');
-  document.getElementById('playerNameR').textContent = 'Вы: ' + playerName;
-  if (myCorrect) {
-    document.getElementById('resultIcon').textContent = '🎉';
-    document.getElementById('resultText').textContent = 'Вы ответили верно!';
-  } else {
-    document.getElementById('resultIcon').textContent = '❌';
-    document.getElementById('resultText').textContent = 'Вы ошиблись...';
-  }
-  let sub = '';
-  if (myCorrect && isMajorityCorrect) sub = 'Ваше мнение совпало с большинством — правильный ответ!';
-  else if (myCorrect && !isMajorityCorrect) sub = 'Вы ответили правильно, хотя большинство ошиблось.';
-  else if (!myCorrect && isMajorityCorrect) sub = 'Большинство ответило правильно, но не вы.';
-  else sub = 'Большинство тоже ошиблось.';
-  document.getElementById('resultSub').textContent = sub;
+async function submitVote(optionIndex, btnElement) {
+    if (hasVoted) return;
+    hasVoted = true;
+    myVote = optionIndex;
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    btnElement.classList.add('selected');
+    await sbClient.from('votes').insert([{ game_code: roomCode, question_id: currentQ, player_name: playerName, option_index: optionIndex }]);
+    setTimeout(() => {
+        document.getElementById('questionScreen').classList.add('hidden');
+        document.getElementById('answeredScreen').classList.remove('hidden');
+        document.getElementById('answerIcon').textContent = '⏳';
+        document.getElementById('answerTitle').textContent = 'Ответ принят!';
+        document.getElementById('answerText').textContent = 'Ожидаем результатов от ведущего...';
+    }, 500);
+}
+
+function showRevealed(isCorrect) {
+    document.getElementById('questionScreen').classList.add('hidden');
+    document.getElementById('answeredScreen').classList.remove('hidden');
+    document.getElementById('finalScreen').classList.add('hidden');
+    const q = QUIZ_DATA[currentQ];
+    const personalCorrect = (myVote === q.correct);
+    if (personalCorrect) {
+        document.getElementById('answerIcon').textContent = '🎉';
+        document.getElementById('answerTitle').textContent = 'Вы ответили верно!';
+        document.getElementById('answerText').textContent = isCorrect ? 'Большинство тоже угадало!' : 'Большинство ошиблось, но вы молодец!';
+    } else {
+        document.getElementById('answerIcon').textContent = '❌';
+        document.getElementById('answerTitle').textContent = 'Вы ошиблись...';
+        document.getElementById('answerText').textContent = isCorrect ? 'Большинство ответило правильно.' : 'Большинство тоже ошиблось.';
+    }
 }
 
 function showFinal() {
-  document.getElementById('questionScreen').classList.add('hidden');
-  document.getElementById('resultScreen').classList.add('hidden');
-  document.getElementById('waitScreen').classList.add('hidden');
-  document.getElementById('finalScreen').classList.remove('hidden');
+    document.getElementById('waitingScreen').classList.add('hidden');
+    document.getElementById('questionScreen').classList.add('hidden');
+    document.getElementById('answeredScreen').classList.add('hidden');
+    document.getElementById('finalScreen').classList.remove('hidden');
 }
+
+init();
 </script>
 </body>
 </html>
